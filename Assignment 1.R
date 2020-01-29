@@ -87,6 +87,32 @@ coef(summary(mod))[2,4]
 
 # Warning gwas.als 500,000 entries can take a long time to process
 
+# BIOMARKER
+# Below the threshold for gwas.als
+
+length(which(gwas.als$p <10^(-8)))
+
+# Output: 124;  pvalues which are below the threshold
+
+Low_p_all <- (which(gwas.als$p <10^(-8)))
+
+Low_p_all
+
+gwas.als[Low_p_all, ]
+
+als_p.threshold_val <- gwas.als[Low_p_all, ]
+
+
+# 124 in total, below the threshold
+# 121 chr 9
+# 3 chr 17
+
+
+
+
+
+
+
 # Chr_17 Manhattan plot Base R Biomarker
 Chr17_gwas<- subset(gwas.als, chr == 17)
 
@@ -97,7 +123,7 @@ plot(x = Chr17_gwas$bp,
      xlab='Position')
 
 
-# Chr_19 Manhattan plot Base R Biomarker
+# Chr_9 Manhattan plot Base R Biomarker
 Chr9_gwas<- subset(gwas.als, chr == 9)
 
 plot(x = Chr9_gwas$bp,
@@ -108,11 +134,12 @@ plot(x = Chr9_gwas$bp,
 
 
 # ALL Manhattan plot Base R Biomarker
-# plot(x = gwas.als$p,
-#      y = -log10(gwas.als$p),
-#      pch = '+',
-#      ylab = '-log10(p) for PIK3CA expression',
-#      xlab = 'Position')
+
+plot(x = gwas.als$p,
+     y = -log10(gwas.als$p),
+     pch = '+',
+     ylab = '-log10(p) for gwas alas expression',
+     xlab = 'Position')
 
 
 # MIN all gwas
@@ -124,9 +151,95 @@ subset(gwas.als, p == min.p.biomarker)
 
 
 
+
+
+# Question 3 - assessment
+# Selecting the top most significant SNP; one method is to subset the respective
+# chromosome then, manually filter the data by size order in the "p" column hence to show the corresponding snp.
+
+# Selecting the top most significant SNP from chrosomosome 17 is
+
+# 
+#         chr     snp     bp       a1 a2    freq     b         se           p
+# 6843269	17	rs35714695	26719788	G	A	0.8239640	0.0295130	0.00455194	8.95546e-11 - from file
+# 
+#             rs35714695	chr17	28392769	true	G	A	17_26719788_G_A_b37 - from online source
+# 
+# 
+# # top most significant SNP from chromosome 9.
+# 
+#          chr    snp        bp     a1  a2    freq       b              se           p
+# 
+# 4500536	 9	 rs3849943	27543382	C	  T	  0.2479550	  0.0405097	  0.00396593	  1.70882e-24
+
+
+
+
+
+
+
+# ALL Manhattan plot Base R Biomarker qqman
+
+install.packages("qqman")
+
+library(qqman)
+
+manhattan(gwas.als, chr="chr", bp="bp", p="p", snp="snp")
+
+# All_manhattan <- manhattan(gwas.als, chr="chr", bp="bp", p="p", snp="snp")
+
+# explanation : What do you observe? Is there anything particularly striking?
+# How can you explain these observations? (10 points for interpretation) 
+
+# The plot supports the above results # showing a peak at chr 17 (3points) and
+# larger peak at chr 9 (121 points). The X axis shows that the position on a
+# chromosome where these significant SNPs occur are at the same position. The Y
+# axis tells how much it is associated with a trait, these vary in range beyond the threshold.
+# Noticeable also is that there is a gap in the position of chromosome 9 where there are points at all.
+
+
+
+  
+
+
+# EXPRESSION
+
+# ALL Manhattan plot Base R Expression; PIK3CA.pvalues
+
+# plot(x = gwas.als$bp,
+#      y = -log10(gwas.als$PIK3CA.pvalues),
+#      pch = '+',
+#      ylab = '-log10(p) for PIK3CA expression',
+#      xlab = 'Position')
+
+
+# Chr17_gwas Manhattan plot Base R Expression     
+plot(x = Chr17_gwas$bp ,
+     y = -log10(Chr17_gwas$PIK3CA.pvalues),
+     pch = '+',
+     ylab = '-log10(p) for PIK3CA expression',
+     xlab = 'Position')
+
+
+# Chr9_gwas Manhattan plot Base R Expression     
+plot(x = Chr9_gwas$bp ,
+     y = -log10(Chr9_gwas$PIK3CA.pvalues),
+     pch = '+',
+     ylab = '-log10(p) for PIK3CA expression',
+     xlab = 'Position')
+
+
+# MIN all gwas
+min.p.biomarker.PIK3CA <- min(gwas.als$PIK3CA.pvalues)
+min.p.biomarker.PIK3CA
+subset(gwas.als, PIK3CA.pvalues == min.p.biomarker.sort1)
+
 ##################################
 
 ##################################
+
+
+
 
 
 # Calculating Expression PIK3CA.pvalues Changed column name from original
@@ -165,34 +278,23 @@ pvalues.PIK3CA[Low_p, ]
 # snp PIK3CA.pvalues
 # 969 rs113505981   4.725661e-14
 
-
-# pvalues.PIK3CA[ (returned Low_p value(s)) ,  ] Search the row number and pass
-# into above expression to return the relevant snp and PIK3CA.pvalues row
-
-
 ##################################
 
 ##################################
 
 
-# Calculating Expression pvalues.CDKN2A Changed column name from original
-# MarkerName in the script to snp (as the orginal had MarkerName as one of the
-# columns for by.x part)
+
+
+
+
+# Calculating Expression pvalues.CDKN2A
+
 pvalues.CDKN2A <- data.frame(snp=colnames(snps), pvalues.CDKN2A=NA)
 
 for (i in 1:nSNPs) {
   mod <- lm(expression.df$CDKN2A~snps[,i])
   pvalues.CDKN2A[i,2] <- coef(summary(mod))[2,4]
 }
-
-# Merging Calculated Expression pvalues.PIK3CA to gwas.als data frame
-#helps for plotting histograms of pvalues.PIK3CA also
-# 
-# gwas.als <- merge(gwas.als, pvalues.CDKN2A,
-#                   by.x = , by.y = "snp",
-#                   all.x = FALSE, all.y = FALSE)
-# head(gwas.als)
-
 
 length(which(pvalues.CDKN2A$CDKN2A.pvalues <10^(-8)))
 
@@ -210,23 +312,17 @@ pvalues.CDKN2A[Low_c, ]
 ##################################
 
 
-# Calculating Expression pvalues.TP53 Changed column name from original
-# MarkerName in the script to snp (as the orginal had MarkerName as one of the
-# columns for by.x part)
+
+
+
+
+# Calculating Expression pvalues.TP53
 pvalues.TP53 <- data.frame(snp=colnames(snps), TP53.pvalues=NA)
 
 for (i in 1:nSNPs) {
   mod <- lm(expression.df$TP53~snps[,i])
   pvalues.TP53[i,2] <- coef(summary(mod))[2,4]
 }
-
-# Merging Calculated Expression pvalues.PIK3CA to gwas.als data frame
-#helps for plotting histograms of pvalues.PIK3CA also
-# 
-# gwas.als <- merge(gwas.als, pvalues.TP53,
-#                   by.x = , by.y = "snp",
-#                   all.x = FALSE, all.y = FALSE)
-# head(gwas.als)
 
 length(which(pvalues.TP53$TP53.pvalues <10^(-8)))
 
@@ -239,31 +335,22 @@ pvalues.TP53[Low_t, ]
 
 # OUTPUT: integer(0) pvalues which are below the threshold
 
-
 ###################################
 
 
 ##################################
 
 
-# Calculating Expression pvalues.SMAD4 Changed column name from original
-# MarkerName in the script to snp (as the orginal had MarkerName as one of the
-# columns for by.x part)
+
+
+
+# Calculating Expression pvalues.SMAD4
 pvalues.SMAD4 <- data.frame(snp=colnames(snps), SMAD4.pvalues=NA)
 
 for (i in 1:nSNPs) {
   mod <- lm(expression.df$SMAD4~snps[,i])
   pvalues.SMAD4[i,2] <- coef(summary(mod))[2,4]
 }
-
-# Merging Calculated Expression pvalues.PIK3CA to gwas.als data frame
-#helps for plotting histograms of pvalues.PIK3CA also
-# 
-# gwas.als <- merge(gwas.als, pvalues.SMAD4,
-#                   by.x = , by.y = "snp",
-#                   all.x = FALSE, all.y = FALSE)
-# head(gwas.als)
-
 
 length(which(pvalues.SMAD4$SMAD4.pvalues <10^(-8)))
 
@@ -275,13 +362,15 @@ Low_s
 # OUTPUT: integer(1) pvalues which are below the threshold
 
 
-pvalues.SMAD4[ , ]
+pvalues.SMAD4[Low_s, ]
 
 # snp SMAD4.pvalues
 # 969 rs113505981  9.040235e-12
 
+
 ###################################
 
+##################################
 
 
 
@@ -289,41 +378,11 @@ pvalues.SMAD4[ , ]
 
 
 
-# ALL Manhattan plot Base R Expression
-
-# plot(x = gwas.als$bp,
-#      y = -log10(gwas.als$PIK3CA.pvalues),
-#      pch = '+',
-#      ylab = '-log10(p) for PIK3CA expression',
-#      xlab = 'Position')
-
-
-# Chr17_gwas Manhattan plot Base R Biomarker
-plot(x = Chr17_gwas$bp ,
-     y = -log10(Chr17_gwas$PIK3CA.pvalues),
-     pch = '+',
-     ylab = '-log10(p) for PIK3CA expression',
-     xlab = 'Position')
-
-
-# Chr9_gwas Manhattan plot Base R Biomarker
-plot(x = Chr9_gwas$bp ,
-     y = -log10(Chr9_gwas$PIK3CA.pvalues),
-     pch = '+',
-     ylab = '-log10(p) for PIK3CA expression',
-     xlab = 'Position')
-
-
-# MIN all gwas
-min.p.biomarker.PIK3CA <- min(gwas.als$PIK3CA.pvalues)
-min.p.biomarker.PIK3CA
-subset(gwas.als, PIK3CA.pvalues == min.p.biomarker.sort1)
 
 
 
 
-
-# ESSENTIAL FIRST
+# ESSENTIAL FIRST assignment sheet questions
 
 install.packages("MatrixEQTL")
 library(MatrixEQTL)
@@ -441,6 +500,7 @@ summary(linearm)
 
 
 
+
 # grouped pancreas, brain and the other tissues
 # repeat code for debugging purposes; easy delete/ override
 expression.df <- as.data.frame(mat.gtex)
@@ -535,6 +595,50 @@ anova(mixedm, reducedm)
 # in a more general fashion is snps[,which(colnames(snps) == "rsxx1")]. If you
 # just want the column number, then which(colnames(snps) == "rsxx1") should give
 # you your answer.
+
+
+
+
+Imported17_snp = read.csv("17GTExPortal.csv", header = TRUE)
+
+length(which(Imported17_snp$P.Value <10^(-8)))
+
+Imported17_low <- (which(Imported17_snp$P.Value <10^(-8)))
+
+Imported17_low
+
+Imported17_snp[Imported17_low, ]
+
+Imported17.threshold_val <- Imported17_snp[Imported17_low, ]
+
+
+
+
+
+
+
+Imported9_snp = read.csv("9GTExPortal.csv", header = TRUE)
+
+length(which(Imported9_snp$P.Value <10^(-8)))
+
+Imported9_low <- (which(Imported9_snp$P.Value <10^(-8)))
+
+Imported9_low
+
+Imported9_snp[Imported9_low, ]
+
+Imported9.threshold_val <- Imported9_snp[Imported9_low, ]
+
+
+
+# Which genes are affected and in which tissues  Imported17.threshold_val
+
+
+# How many cis and how many trans eQTLs in each case? (5points)
+
+# Comment on whether these genes could be involved in the development of ALS and how
+# that might look like at a functional level, providing further support from scientific literature or
+# other sources. (10 points)
 
 
 
