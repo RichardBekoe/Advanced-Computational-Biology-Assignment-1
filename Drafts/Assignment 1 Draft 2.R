@@ -76,7 +76,7 @@ pvalues.CDKN2A[Low_c, ]
 
 # OUTPUT: integer(0) pvalues which are below the threshold
 
-##################################
+###################################
 
 
 
@@ -99,7 +99,7 @@ pvalues.TP53[Low_t, ]
 
 # OUTPUT: integer(0) pvalues which are below the threshold
 
-##################################
+###################################
 
 
 
@@ -126,7 +126,7 @@ pvalues.SMAD4[Low_s, ]
 
 # OUTPUT: integer(1) pvalues which are below the threshold
 
-##################################
+###################################
 
 selectedSNP_PIK3CA_1 <- snps[,"rs113505981"]
 roundSNP_1 <- round(snps[,"rs113505981"])
@@ -358,7 +358,7 @@ plot(x = gwas.als$p,
 
 
 # MIN all gwas
-min.p.biomarker <- min(gwas.als$p)
+min.p.biomarker <- min(gwas.als$p) rich
 min.p.biomarker
 # [1] 1.70882e-24
 subset(gwas.als, p == min.p.biomarker)
@@ -374,7 +374,7 @@ subset(gwas.als, p == min.p.biomarker)
 
 install.packages("qqman")
 
-library(qqman)
+library(qqman) rich
 
 manhattan(gwas.als, chr="chr", bp="bp", p="p", snp="snp")
 
@@ -393,17 +393,198 @@ manhattan(gwas.als, chr="chr", bp="bp", p="p", snp="snp")
 
 
 
+
+# EXPRESSION analysis (using PIK3CA.pvalues)
+
+# ALL Manhattan plot Base R Expression; PIK3CA.pvalues
+
+# plot(x = gwas.als$bp,
+#      y = -log10(gwas.als$PIK3CA.pvalues),
+#      pch = '+',
+#      ylab = '-log10(p) for PIK3CA expression',
+#      xlab = 'Position')
+
+
+# Chr17_gwas Manhattan plot Base R Expression     
+plot(x = Chr17_gwas$bp ,
+     y = -log10(Chr17_gwas$PIK3CA.pvalues),
+     pch = '+',
+     ylab = '-log10(p) for PIK3CA expression',
+     xlab = 'Position')
+
+
+# Chr9_gwas Manhattan plot Base R Expression     
+plot(x = Chr9_gwas$bp ,
+     y = -log10(Chr9_gwas$PIK3CA.pvalues),
+     pch = '+',
+     ylab = '-log10(p) for PIK3CA expression',
+     xlab = 'Position')
+
+
+# MIN all gwas
+min.p.biomarker.PIK3CA <- min(gwas.als$PIK3CA.pvalues) RICH
+min.p.biomarker.PIK3CA
+subset(gwas.als, PIK3CA.pvalues == min.p.biomarker.sort1)
+
+
+
+##################################
+
+##################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ESSENTIAL FIRST assignment sheet questions
+
+install.packages("MatrixEQTL")
+library(MatrixEQTL)
+
+pvOutputThreshold = 1e-8
+errorCovariance = numeric()
+useModel = modelLINEAR
+
+ssnps = SlicedData$new()
+ssnps$CreateFromMatrix(t(snps))
+show(ssnps)
+
+genes = SlicedData$new()
+
+mat.expr <- t(as.matrix(mat.gtex[,-1]))
+rownames(mat.expr) <- NULL
+colnames(mat.expr) <- rownames(mat.gtex)
+
+
+# Alternative; one gene column only e.g. PIK3CA
+# mat.expr <- t(as.matrix(mat.gtex$PIK3CA[,-1]))
+# rownames(mat.expr) <- NULL
+# colnames(mat.expr) <- rownames(mat.gtex$PIK3CA)
+
+# OR for just one gene instead of the whole matrix e.g. PIK3CA ??
+# VALIDATION model should match up with other method ??
+
+genes$CreateFromMatrix(mat.expr)
+show(genes)
+
+# cvrt = SlicedData$new()
+# mat.cov<- t(as.matrix(cov[,-c(1,3)]))
+# colnames(mat.cov) <- cov$sample
+# cvrt$CreateFromMatrix(mat.cov)
+# show(cvrt)
+
+meqt11 = Matrix_eQTL_engine(
+  snps = ssnps,
+  gene = genes,
+  output_file_name = NULL,
+  pvOutputThreshold = pvOutputThreshold,
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  pvalue.hist = TRUE,
+  min.pv.by.genesnp = FALSE,
+  noFDRsaveMemory = FALSE)
+
+plot(meqt11)
+
+meqt11$all$neqtls
+
+# [1] 1
+
+head(meqt11$all$eqtls)
+
+# snps   gene        statistic        pvalue        FDR           beta
+# 1 rs113505981 row3  8.777644      9.040235e-12    2.712071e-08    12.04821
+
+# We can see that there is a significant association between the SNP and FRK
+# expression (as before), but also between sites 5 and 6 and FRK expression.
+
+# We can see that this output matches the number of eQTLs originally found for mat.gtex (with/without adjusting for covariates).
+# Print out the number of eQTLs and their details
+
+
+
+
+
+
+
+
+
+# OLD - simple linear regression models to identify potential eQTLs
+dat.snps16 <- data.frame(Expression = expression.df$PIK3CA,
+                      Genotype = snps[,16])
+
+linearm <- lm(Expression~Genotype, data = dat.snps16)
+summary(linearm)
+
+# coef(summary(mod))[2,4] ??? USE MOD!! AND LOOP, ALL THE GENES; SAME AS BEFORE CALCULATION?? WITH CORRELATION??
+
+
+# OUTPUT: Residual standard error: 4.946 on 51 degrees of freedom
+# Multiple R-squared:  0.04066,	Adjusted R-squared:  0.02185 
+# F-statistic: 2.162 on 1 and 51 DF,  p-value: 0.1476
+
+# We can see that there is a significant association between the SNP and PIK3CA expression
+
+dat.snps20 <- data.frame(Expression = expression.df$CDKN2A,
+                         Genotype = snps[,20])
+
+linearm <- lm(Expression~Genotype, data = dat.snps20)
+summary(linearm)
+
+# We can not see that there is a significant association between the SNP and CDKN2A expression
+
+# OUTPUT: Residual standard error: 2.721 on 51 degrees of freedom
+# Multiple R-squared:  0.008847,	Adjusted R-squared:  -0.01059 
+# F-statistic: 0.4552 on 1 and 51 DF,  p-value: 0.5029
+
+dat.snps35 <- data.frame(Expression = expression.df$SMAD4,
+                         Genotype = snps[,35])
+
+linearm <- lm(Expression~Genotype, data = dat.snps35)
+summary(linearm)
+
+# OUTPUT: Residual standard error: 9.267 on 51 degrees of freedom
+# Multiple R-squared:  0.02209,	Adjusted R-squared:  0.002918
+# F-statistic: 1.152 on 1 and 51 DF,  p-value: 0.2882
+
+
+
+
+
+
+
+
 # Q3 a) b) c) -----------------------------------------------------
 
-# Selecting the top most significant SNP; One method is to subset the respective
-# chromosome then, manually filter the data by size order in the "p" column.
-# Hence then to show the corresponding snp using the data from Question two.
+
+
+# Selecting the top most significant SNP; one method is
+# to subset the respective chromosome then, manually filter the data by size
+# order in the "p" column hence then to show the corresponding snp.
 
 
 # CHROMOSOME 17)  Selecting the top most significant SNP from chrosomosome 17.
 
 #         chr     snp     bp       a1 a2    freq     b         se           p
-# 6843269	17	rs35714695	26719788	G	A	0.8239640	0.0295130	0.00455194	8.95546e-11
+# 6843269	17	rs35714695	26719788	G	A	0.8239640	0.0295130	0.00455194	8.95546e-11 - from file
+# 
+#             rs35714695	chr17	28392769	true	G	A	17_26719788_G_A_b37 - from online source
+
 
 # CHROMOSOME 9)  Selecting the top most significant SNP from chromosome 9.
 
@@ -413,10 +594,6 @@ manhattan(gwas.als, chr="chr", bp="bp", p="p", snp="snp")
 
 
 
-# Used the above snps from chromosome 17 and chromosome 9 to search
-# https://gtexportal.org/home/ for single-tissue eQTLs of these SNPs. And
-# downloaded the results in csv format. Also applied a threshold to identify
-# eQTLs
 
 Imported17_snp = read.csv("17GTExPortal.csv", header = TRUE)
 
@@ -429,6 +606,9 @@ Imported17_low
 Imported17_snp[Imported17_low, ]
 
 Imported17.threshold_val <- Imported17_snp[Imported17_low, ]
+
+
+
 
 
 
@@ -446,35 +626,31 @@ Imported9_snp[Imported9_low, ]
 Imported9.threshold_val <- Imported9_snp[Imported9_low, ]
 
 
-# For Chr 9 one gene is affected C9orf72 and the tissues affected are as seen in the table.
 
-# For Chr 17 two genes TMEM97 and POLDIP2 are affected and the tissues affected are as seen in the table
+# Which genes are affected and in which tissues  Imported17.threshold_val
+# 
+# For Chr 9 one gene is affected C9orf72 and the tissues affected are as seen in the table
+# 
+# For Chr 17 two genes are affected and the tissues affected are as seen in the table
 
+# How many cis and how many trans eQTLs in each case? (5points)
 
-# b)     How many cis and how many trans eQTLs in each case? (5points)
-
-# Chr 9 
-# All SNP.ID rs3849943, gene C9orf72 have Cis-eQTLs (number = 18) [	rs3849943]
-
+# Chr 9
+# All SNP.ID C9orf72 have Cis-eQTLs (number = 18) [	rs3849943]
+# 
 # Chr 17
-# All SNP.ID rs35714695, gene TMEM97 have Cis-eQTLs (number = 1) [ rs35714695]
-#
-# All SNP.ID rs35714695, gene POLDIP2 have Cis-eQTLs (number = 2) [ref - Systematic identification database… ] [ rs35714695]
-
-# A cis eQTL is a SNP showing association with gene expression located
-# close by (usually within a 1-Mb window) of the gene that it influences. A
-# trans eQTL is a SNP located elsewhere in the genome, away from the gene whose
-# expression it is altering. GTEx IGV Browser was used to explore the location
-# of the SNP in comparison to the transcription start sites of the genes, hence
-# evaluate the relative distance An online eQTL browser was also used as another
-# source of information. [ref - https://gtexportal.org/home/] [ref - systematic identification database… ]
-
-# In addiotion, gene expression signatures are cell-type specific, and therefore
-# regulatory control of expression may also be cell-type dependent. Significant
-# tissue specificity has been reported for multiple cis eQTLs.
+# 
+# All TMEM97 have Cis-eQTLs (number = 1) [ rs35714695]
+# 
+# All POLDIP2 have Cis-eQTLs (number = 2) [ref - Systematic identification… ] [ rs35714695]
 
 
-# c)     Comment on whether these genes could be involved in the development of ALS and how
+# Gene expression signatures are cell-type specific, and therefore regulatory
+# control of expression may also be cell-type dependent. Significant tissue
+# specificity has been reported for multiple cis eQTLs.
+
+
+# Comment on whether these genes could be involved in the development of ALS and how
 # that might look like at a functional level, providing further support from scientific literature or
 # other sources. (10 points)
 
@@ -489,12 +665,12 @@ Imported9.threshold_val <- Imported9_snp[Imported9_low, ]
 
 
 # TMEM97
-# TMEM97 ligands bind to S2R and has a pharmacologic profile
+# TMEM97 ligands bind to S2R (Alon et al., 2017) and has a pharmacologic profile
 # the same as that of S2R. Over the past few decades, sigma receptors (SRs),
 # including sigma 1 and sigma 2 receptor subtypes (S1R and S2R, respectively)
 # have been widely associated with aging- and mitochondria-associated disorders,
 # such as Parkinson’s and Alzheimer’s disease, multiple sclerosis and
-# amyotrophic lateral sclerosis. However, the specific role played by this orphan
+# amyotrophic lateral sclerosis However, the specific role played by this orphan
 # receptor family in cell biology has yet to be clarified. The 3D structure of
 # TMEM97/S2R would provide understanding of the biological functions and
 # mechanisms. [ref - Sigma receptors… ] [ref - Role of the sigma-1 receptor…]
@@ -511,5 +687,14 @@ Imported9.threshold_val <- Imported9_snp[Imported9_low, ]
 # range of cellular functions have also been implicated. [ref - C9orf72-mediated
 # ALS and FTD: multiple pathways to disease ] [ref - Molecular Mechanisms of
 # Neurodegeneration Related to C9orf72 Hexanucleotide Repeat Expansion]
+
+
+
+
+
+
+
+# SEE ONENOTE FOR FURTHER NOTES
+
 
 
