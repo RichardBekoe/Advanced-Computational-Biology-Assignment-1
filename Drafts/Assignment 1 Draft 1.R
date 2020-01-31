@@ -1,5 +1,6 @@
+# Question 1
 
-# Q1 a) -----------------------------------------------------------
+# a)
 
 load("snps.RData")
 load("mat.gtex.RData")
@@ -24,12 +25,43 @@ setdiff(samples.ExprData, samples.ExprData)
 length(intersect(samples.GenoData,samples.ExprData))
 length(intersect(samples.GenoData,samples.ExprData)) == length(rownames(mat.gtex))
 
-# linear regression models to identify potential eQTLs
-# Identifying potential eQTLs for all genes
+selectedSNP <- snps[,16]
+geno.16 <- round(snps[,16])
+# "rs7874974" = snp 16
 
 
-# Calculating Expression PIK3CA.pvalues levels and thresholding which are below
-# the 10^(-8) cutoff. Then finding the corresponding snps
+MAF.16 <- sum(table(geno.16)*c(0, 1, 2))/(2*length(selectedSNP))
+MAF.16
+theory <- c((1-MAF.16)^2, 2*MAF.16*(1-MAF.16), MAF.16^2)
+chisq.test(table(round(snps[,16])), p=theory)
+
+# This SNP complies with HWE.
+# Now plotted is the gene expression distribution for selected genes.
+# Plotting the distribution of gene expression levels across samples for gene CDKN2A: ?
+
+# Output - Chi-squared test for given probabilities
+# data:  table(round(snps[, 16]))
+# X-squared = 1.2745, df = 2, p-value = 0.5287
+
+
+
+
+# simple linear regression models to identify potential eQTLs
+
+mod <- lm(expression.df$PIK3CA~ snps[,"rs7874974"])
+summary(mod)
+coef(summary(mod))
+coef(summary(mod))[2,4]
+
+# OUTPUT: > coef(summary(mod))[2,4]
+# [1] 0.1476368
+
+
+
+
+# Calculating Expression PIK3CA.pvalues Changed column name from original
+# MarkerName in the script to snp (as the orginal had MarkerName as one of the
+# columns for by.x part)
 pvalues.PIK3CA <- data.frame(snp=colnames(snps), PIK3CA.pvalues=NA)
 
 for (i in 1:nSNPs) {
@@ -37,7 +69,18 @@ for (i in 1:nSNPs) {
   pvalues.PIK3CA[i,2] <- coef(summary(mod))[2,4]
 }
 
+# Merging Calculated Expression pvalues.PIK3CA to gwas.als data frame
+#helps for plotting histograms of pvalues.PIK3CA also
+
+gwas.als <- merge(gwas.als, pvalues.PIK3CA,
+                  by.x = , by.y = "snp",
+                  all.x = FALSE, all.y = FALSE)
+head(gwas.als)
+
+
 length(which(pvalues.PIK3CA$PIK3CA.pvalues <10^(-8)))
+
+# Output: 2;  pvalues which are below the threshold
 
 Low_p <- (which(pvalues.PIK3CA$PIK3CA.pvalues <10^(-8)))
 
@@ -45,15 +88,22 @@ Low_p
 
 pvalues.PIK3CA[Low_p, ]
 
+# OUTPUT: 
 # snp PIK3CA.pvalues
 # 964 rs4977264   1.063495e-11
-
+# 
 # snp PIK3CA.pvalues
 # 969 rs113505981   4.725661e-14
 
-# Output: 2 pvalues which are below the threshold
+# After do the MAF method and check which ones comply
+
 
 ##################################
+
+##################################
+
+
+
 
 
 
@@ -74,9 +124,14 @@ Low_c
 
 pvalues.CDKN2A[Low_c, ]
 
+
 # OUTPUT: integer(0) pvalues which are below the threshold
 
 ###################################
+
+##################################
+
+
 
 
 
@@ -97,9 +152,15 @@ Low_t
 
 pvalues.TP53[Low_t, ]
 
+
 # OUTPUT: integer(0) pvalues which are below the threshold
 
 ###################################
+
+
+##################################
+
+
 
 
 
@@ -117,69 +178,51 @@ Low_s <- (which(pvalues.SMAD4$SMAD4.pvalues <10^(-8)))
 
 Low_s
 
+
+# OUTPUT: integer(1) pvalues which are below the threshold
+
+
 pvalues.SMAD4[Low_s, ]
 
 # snp SMAD4.pvalues
 # 969 rs113505981  9.040235e-12
 
-#Same snp, rs113505981, as PIK3CA
-
-# OUTPUT: integer(1) pvalues which are below the threshold
 
 ###################################
 
-selectedSNP_PIK3CA_1 <- snps[,"rs113505981"]
-roundSNP_1 <- round(snps[,"rs113505981"])
+##################################
 
-
-AF.SNP_1 <- sum(table(roundSNP_1)*c(0, 1, 2))/(2*length(selectedSNP_PIK3CA_1))
-AF.SNP_1
-
-# reversal required as AF greater than 0.5
-
-MAF.SNP_1 <- min(AF.SNP_1, 1-AF.SNP_1)
-MAF.SNP_1
-
-theory1 <- c((1-MAF.SNP_1)^2, 2*MAF.SNP_1*(1-MAF.SNP_1), MAF.SNP_1^2)
-chisq.test(table(round(snps[,"rs113505981"])), p=theory1)
-
-
-# Chi-squared test for given probabilities
-# # Chi-squared test for given probabilities
-# data:  table(round(snps[, "rs113505981"]))
-# X-squared = 81.345, df = 2, p-value < 2.2e-16
-
-# This SNP_1 does not comply with HWE (p-value < 2.2e-16)
+# MAF?? each one pass?
 
 
 
+# Warning gwas.als 500,000 entries can take a long time to process
 
-selectedSNP_PIK3CA_2 <- snps[,"rs4977264"]
-roundSNP_2 <- round(snps[,"rs4977264"])
+# BIOMARKER
+# Below the threshold for gwas.als
+
+length(which(gwas.als$p <10^(-8)))
+
+# Output: 124;  pvalues which are below the threshold
+
+Low_p_all <- (which(gwas.als$p <10^(-8)))
+
+Low_p_all
+
+gwas.als[Low_p_all, ]
+
+als_p.threshold_val <- gwas.als[Low_p_all, ]
+
+# lm for each gene
+# ????? QUESTION 1 Boxplot for pik3ca
 
 
-MAF.SNP_2 <- sum(table(roundSNP_2)*c(0, 1, 2))/(2*length(selectedSNP_PIK3CA_2))
-MAF.SNP_2
+# 124 in total, below the threshold
+# 121 chr 9
+# 3 chr 17
 
-# No reversal required as < 0.5. The MAF for the SNP is <0.5,
-# confirming that the allele for which we return the measure is the minor (=
-# less common) allele. In an eQTL study often a minimum MAF is required. Since
-# MAF essentially reflects how often an allele has been observed in a
-# population, it also defines how often the gene expression levels have been
-# observed for heterozygous and homozygous alleles.
 
-theory2 <- c((1-MAF.SNP_2)^2, 2*MAF.SNP_2*(1-MAF.SNP_2), MAF.SNP_2^2)
-chisq.test(table(round(snps[,"rs4977264"])), p=theory2)
-
-# Chi-squared test for given probabilities
-# data:  table(round(snps[, "rs4977264"]))
-# X-squared = 0.96215, df = 2, p-value = 0.6181
-
-# This SNP_2 complies with HWE (p-value = 0.6181)
-
-# Now plotted is the gene expression distribution for selected genes. Plotted
-# are the distribution of gene expression levels across samples for gene PIK3CA
-# and SMAD4. Hence graphs of identified associations.
+# Graphs of identified associations
 
 # Base R hist PIK3CA
 hist(expression.df$PIK3CA, main="Gene expression profile: PIK3CA", xlab = "Expression level")
@@ -192,30 +235,32 @@ ggplot(expression.df, aes(PIK3CA))+
   geom_density(alpha=.2, fill="#FF6666")
 
 
-# Base R hist SMAD4
-hist(expression.df$SMAD4, main="Gene expression profile: SMAD4",
+
+# Base R hist CDKN2A
+hist(expression.df$CDKN2A, main="Gene expression profile: CDKN2A",
      xlab="Expression level")
 
-# ggplot hist SMAD4
-ggplot(expression.df, aes(SMAD4))+
+# ggplot hist CDKN2A
+ggplot(expression.df, aes(CDKN2A))+
   geom_histogram(aes(y=..density..), colour="black", fill="white")+
   geom_density(alpha=.2, fill="#FF6666")
 
-# Influence of SNP rs4977264 on phenotype
 
-# boxplot PIK3CA ~ "rs4977264"
-boxplot(expression.df$PIK3CA ~ roundSNP_2,
-        main="Gene expression levels of PIK3CA for SNP rs4977264",
+
+# boxplot PIK3CA ~ geno.16
+boxplot(expression.df$PIK3CA ~ geno.16,
+        main="Gene expression levels of PIK3CA for SNP rs7874974",
         xlab = "Genotypes",
         ylab = "Expression",
         names = c("CC", "CT", "TT"))
 
-# Boxplot of gene expression levels of PIK3CA for SNP rs4977264
-# Searched gwas.als using snp rs4977264 to find the corresponding alleles to
-# find C and T.
 
 
-# Q1 b) -----------------------------------------------------------
+# Question 1)
+
+# b)
+
+
 
 # grouped pancreas, brain and the other tissues
 # repeat code for debugging purposes; easy delete/ override
@@ -258,17 +303,20 @@ dat.covariate <- data.frame(Expression = expression.df$PIK3CA,
                             Genotype = snps[,"rs4977264"],
                             Site = expression.df$Tissue)
 
-# "rs4977264" = selectedSNP_PIK3CA_2
+# the significant snip
+
+# "rs7874974" = snp 16
 
 linearm <- lm(Expression~Genotype+Site, data = dat.covariate)
 summary(linearm)
 
-# Residual standard error: 1.935 on 46 degrees of freedom
-# Multiple R-squared:  0.8675,	Adjusted R-squared:  0.8502 
-# F-statistic:  50.2 on 6 and 46 DF,  p-value: < 2.2e-16
+# Residual standard error: 2.01 on 46 degrees of freedom
+# Multiple R-squared:  0.857,	Adjusted R-squared:  0.8384 
+# F-statistic: 45.96 on 6 and 46 DF,  p-value: < 2.2e-16
 
-# We can see that there is a significant association between the SNP (rs4977264) and PIK3CA
-# expression, but also between colon, kidney, lung, oesophagus, and pancreas expresion.
+# We can see that there is a significant association between the SNP and PIK3CA
+# expression, but also between "colon, kidney, lung, oesophagus, Pancreas" and
+# Pancreas and PIK3CA expression.
 
 library(lme4)
 
@@ -282,51 +330,58 @@ summary(mixedm)
 reducedm <- lmer(Expression~1+(1|Site), data = dat.covariate)
 anova(mixedm, reducedm)
 
-# mixedm: Expression ~ Genotype + (1 | Site)
-# Df    AIC    BIC  logLik deviance  Chisq Chi Df Pr(>Chisq)   
-# reducedm  3 246.64 252.55 -120.32   240.64                            
-# mixedm    4 239.79 247.67 -115.89   231.79 8.8477      1   0.002935 **
+# Df    AIC    BIC  logLik deviance  Chisq Chi Df Pr(>Chisq)
+# reducedm  3 246.78 252.69 -120.39   240.78                         
+# mixedm    4 246.26 254.14 -119.13   238.26 2.5145      1     0.1128
 
-# The two models are significantly different (0.05 threshold), so there is a
-# significant association between the selected SNP and PIK3CA expression after
-# taking into account the site where measurements were performed. This result is
-# similar in comparison to the results in the previous findings. Mixed effect models, take into account
-# various random effects not causal to the trait in question, such as the tissue type.
+0.002935 **
+
+# The two models are not significantly different (0.05 threshold), so there is
+# not a significant association between the selected SNP and PIK3CA expression
+# after taking into account the site where measurements were performed. This
+# result is different in comparison to the results in the previous findings
+
+
+# Simple regression models or correlation statistics
+# to assess association between genotype and phenotype, don’t account for population structure.
+# Therefore, more commonly used in practice are mixed effect models, which take into account
+# various random effects not causal to the trait in question, such as the tissue type
+
 
 # As we can see the slope is different when covariates are incorporated in the
 # model. This addition modifies the estimated slope and its associated p-value,
-# and highlights 
-
-
-# The lower p-value when using covariates may indicate that
+# and highlights the number of days of treatment as a significant contributor to
+# the association found. The lower p-value when using covariates indicates that
 # the regression describes the data more accurately.
 
 
+# We can see that there is a significant association between the SNP and X?
+# expression (as before), but also between "SITE" and "SITE" and "X" expression.
 
 
 
 
-# Q2 a) & b) ------------------------------------------------------
+# moodle reply help
+# snps[,"rsxx1"] - where "rsxx1" is your actual SNP ID. Another way to select it
+# in a more general fashion is snps[,which(colnames(snps) == "rsxx1")]. If you
+# just want the column number, then which(colnames(snps) == "rsxx1") should give
+# you your answer.
 
-# BIOMARKER analysis
 
-# Below the threshold for gwas.als
 
-length(which(gwas.als$p <10^(-8)))
 
-# Output: 124 pvalues which are below the threshold
 
-Low_p_all <- (which(gwas.als$p <10^(-8)))
 
-Low_p_all
 
-gwas.als[Low_p_all, ]
 
-als_p.threshold_val <- gwas.als[Low_p_all, ]
 
-# 124 in total, below the threshold
-# 121 chr 9
-# 3 chr 17
+
+
+
+
+
+
+
 
 
 # Chr_17 Manhattan plot Base R Biomarker
@@ -348,6 +403,7 @@ plot(x = Chr9_gwas$bp,
      ylab='-log10(p) for biomarker',
      xlab='Position')
 
+
 # ALL Manhattan plot Base R Biomarker
 
 plot(x = gwas.als$p,
@@ -358,23 +414,46 @@ plot(x = gwas.als$p,
 
 
 # MIN all gwas
-min.p.biomarker <- min(gwas.als$p) rich
+min.p.biomarker <- min(gwas.als$p)
 min.p.biomarker
-# [1] 1.70882e-24
+# [1] 1.70882e-24  (~20mins all processing time)
 subset(gwas.als, p == min.p.biomarker)
 
-#         chr   snp       bp     a1 a2   freq         b         se           p
-# 4500536   9 rs3849943 27543382  C  T 0.247955 0.0405097 0.00396593 1.70882e-24
-
-# Minimum gwas.als p value (biomarker) snp rs3849943 found on CHR 9
 
 
 
-# ALL data: Manhattan plot Base R Biomarker qqman
+
+
+# Question 3 - assessment
+# Selecting the top most significant SNP; one method is to subset the respective
+# chromosome then, manually filter the data by size order in the "p" column hence to show the corresponding snp.
+
+# Selecting the top most significant SNP from chrosomosome 17 is
+
+# 
+#         chr     snp     bp       a1 a2    freq     b         se           p
+# 6843269	17	rs35714695	26719788	G	A	0.8239640	0.0295130	0.00455194	8.95546e-11 - from file
+# 
+#             rs35714695	chr17	28392769	true	G	A	17_26719788_G_A_b37 - from online source
+# 
+# 
+# # top most significant SNP from chromosome 9.
+# 
+#          chr    snp        bp     a1  a2    freq       b              se           p
+# 
+# 4500536	 9	 rs3849943	27543382	C	  T	  0.2479550	  0.0405097	  0.00396593	  1.70882e-24
+
+
+
+
+
+
+
+# ALL Manhattan plot Base R Biomarker qqman
 
 install.packages("qqman")
 
-library(qqman) rich
+library(qqman)
 
 manhattan(gwas.als, chr="chr", bp="bp", p="p", snp="snp")
 
@@ -383,18 +462,18 @@ manhattan(gwas.als, chr="chr", bp="bp", p="p", snp="snp")
 # explanation : What do you observe? Is there anything particularly striking?
 # How can you explain these observations? (10 points for interpretation) 
 
-# The plot supports the above results # showing a peak at chr 17 (3points) and a
-# larger peak at chr 9 (121 points). The X axis shows that the position on the
+# The plot supports the above results # showing a peak at chr 17 (3points) and
+# larger peak at chr 9 (121 points). The X axis shows that the position on a
 # chromosome where these significant SNPs occur are at the same position. The Y
-# axis tells how much it is associated with a trait, these vary in range surpassing the threshold.
-# Noticeable also is that there is a gap in the position of chromosome 9 where there are no points at all.
-
-#  research histogram -> add to the explanation
+# axis tells how much it is associated with a trait, these vary in range beyond the threshold.
+# Noticeable also is that there is a gap in the position of chromosome 9 where there are points at all.
 
 
 
+  
 
-# EXPRESSION analysis
+
+# EXPRESSION
 
 # ALL Manhattan plot Base R Expression; PIK3CA.pvalues
 
@@ -422,24 +501,13 @@ plot(x = Chr9_gwas$bp ,
 
 
 # MIN all gwas
-min.p.biomarker.PIK3CA <- min(gwas.als$PIK3CA.pvalues) RICH
+min.p.biomarker.PIK3CA <- min(gwas.als$PIK3CA.pvalues)
 min.p.biomarker.PIK3CA
 subset(gwas.als, PIK3CA.pvalues == min.p.biomarker.sort1)
 
-
-
 ##################################
 
 ##################################
-
-
-
-
-
-
-
-
-
 
 
 
@@ -568,29 +636,6 @@ summary(linearm)
 
 
 
-
-# Q3 a) b) c) -----------------------------------------------------
-
-
-
-# Selecting the top most significant SNP; one method is
-# to subset the respective chromosome then, manually filter the data by size
-# order in the "p" column hence then to show the corresponding snp.
-
-
-# CHROMOSOME 17)  Selecting the top most significant SNP from chrosomosome 17.
-
-#         chr     snp     bp       a1 a2    freq     b         se           p
-# 6843269	17	rs35714695	26719788	G	A	0.8239640	0.0295130	0.00455194	8.95546e-11 - from file
-# 
-#             rs35714695	chr17	28392769	true	G	A	17_26719788_G_A_b37 - from online source
-
-
-# CHROMOSOME 9)  Selecting the top most significant SNP from chromosome 9.
-
-#          chr    snp        bp     a1  a2    freq       b              se           p
-# 
-# 4500536	 9	 rs3849943	27543382	C	  T	  0.2479550	  0.0405097	  0.00396593	  1.70882e-24
 
 
 
